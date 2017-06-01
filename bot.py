@@ -1,18 +1,20 @@
 import re
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-import time
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 driver = webdriver.Chrome()
-driver.implicitly_wait(10)
+wait = WebDriverWait(driver, float("inf"))
 
 def login():
     driver.get("http://typeracer.com")
 
-    sign_in = driver.find_element_by_link_text("Sign In")
+    sign_in = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Sign In")))
     sign_in.click()
 
-    username = driver.find_element_by_name("username")
+    username = wait.until(EC.presence_of_element_located((By.NAME, "username")))
     username.clear()
     username.send_keys("swimbot")
 
@@ -22,34 +24,38 @@ def login():
         password.send_keys(f.readline(), Keys.RETURN)
 
 def setup_lobby():
-    lobby_link = driver.find_element_by_link_text("Race your friends")
+    lobby_link = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Race your friends")))
     lobby_link.click()
 
-    link_box = driver.find_element_by_class_name("urlTextbox")
+    invite_link = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "invite people")))
+    invite_link.click()
+
+    link_box = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "urlTextbox")))
     link = link_box.get_attribute("value")
 
     OK = driver.find_element_by_link_text("OK")
     OK.click()
 
-    print("URL: {}".format(link))
+    print(link)
 
 def race():
-    start = driver.find_element_by_partial_link_text("join race")
+    start = wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
     start.click()
 
-    time.sleep(0.5)
     preview_text()
 
-    while True:
-        try:
-            driver.find_element_by_class_name("countdownPopup")
-        except:
-            break
+    wait.until(EC.invisibility_of_element_located((By.CLASS_NAME, "countdownPopup")))
 
     exit = driver.find_element_by_partial_link_text("leave race")
     exit.click()
 
+    wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'You will be able')]")))
+
+    wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
+
 def preview_text():
+    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "countdownPopup")))
+
     possibilities = driver.find_elements_by_tag_name("span")
 
     s = ">> "
