@@ -8,6 +8,7 @@ import time
 
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, float("inf"), poll_frequency=0.1)
+WPM = 200
 
 def login():
     driver.get("http://typeracer.com")
@@ -46,7 +47,31 @@ def race():
 
     preview_text()
 
-    wait.until_not(EC.visibility_of_element_located((By.CLASS_NAME, "countdownPopup")))
+    wait.until_not(EC.presence_of_element_located((By.CLASS_NAME, "countdownPopup")))
+
+    print(1)
+    wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "txtInput")))
+
+    print(2)
+    possibilities = driver.find_elements_by_tag_name("span")
+    print(3)
+    s = ""
+    for e in possibilities:
+        if re.search(r"nhwMiddlegwt-uid-.*", e.get_attribute("id")) is not None:
+            s += e.text
+        elif re.search(r"nhwMiddleCommagwt-uid-.*", e.get_attribute("id")) is not None:
+            s += e.text + " "
+        elif re.search(r'nhwRightgwt-uid-.*',
+                       e.get_attribute("id")) is not None:
+            s += e.text
+
+    print(4)
+    text_input = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
+
+    print(5)
+    for word in s.split():
+        text_input.send_keys(word + " ")
+        time.sleep(60 / WPM)
 
     exit = driver.find_element_by_partial_link_text("leave race")
     exit.click()
