@@ -4,17 +4,18 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+import time
 
 driver = webdriver.Chrome()
-wait = WebDriverWait(driver, float("inf"))
+wait = WebDriverWait(driver, float("inf"), poll_frequency=0.1)
 
 def login():
     driver.get("http://typeracer.com")
 
-    sign_in = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Sign In")))
+    sign_in = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Sign In")))
     sign_in.click()
 
-    username = wait.until(EC.presence_of_element_located((By.NAME, "username")))
+    username = wait.until(EC.visibility_of_element_located((By.NAME, "username")))
     username.clear()
     username.send_keys("swimbot")
 
@@ -24,13 +25,14 @@ def login():
         password.send_keys(f.readline(), Keys.RETURN)
 
 def setup_lobby():
-    lobby_link = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Race your friends")))
+    time.sleep(1)
+    lobby_link = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Race your friends")))
     lobby_link.click()
 
-    invite_link = wait.until(EC.presence_of_element_located((By.LINK_TEXT, "invite people")))
+    invite_link = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "invite people")))
     invite_link.click()
 
-    link_box = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "urlTextbox")))
+    link_box = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "urlTextbox")))
     link = link_box.get_attribute("value")
 
     OK = driver.find_element_by_link_text("OK")
@@ -39,22 +41,22 @@ def setup_lobby():
     print(link)
 
 def race():
-    start = wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
+    start = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
     start.click()
 
     preview_text()
 
-    wait.until(EC.invisibility_of_element_located((By.CLASS_NAME, "countdownPopup")))
+    wait.until_not(EC.visibility_of_element_located((By.CLASS_NAME, "countdownPopup")))
 
     exit = driver.find_element_by_partial_link_text("leave race")
     exit.click()
 
-    wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'You will be able')]")))
+    wait.until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'You will be able')]")))
 
-    wait.until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
+    wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
 
 def preview_text():
-    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "countdownPopup")))
+    wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "nonHideableWords")))
 
     possibilities = driver.find_elements_by_tag_name("span")
 
@@ -72,7 +74,8 @@ def preview_text():
     split_s = [s[i:i + 500] for i in range(0, len(s), 500)]
 
     for s in split_s:
-        chat_box.send_keys(s, Keys.RETURN)
+        chat_box.send_keys(s)
+        chat_box.send_keys(Keys.RETURN)
 
 def quit():
     driver.close()
