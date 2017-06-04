@@ -9,9 +9,11 @@ import time
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, float("inf"), poll_frequency=0.1)
 
+# convenience method to load up the website
 def go_to_site():
     driver.get("http://typeracer.com")
 
+# method to log in with certain hidden credentials. currently not working
 def login():
     sign_in = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Sign In")))
     sign_in.click()
@@ -25,8 +27,12 @@ def login():
     with open("password", "r") as f:
         password.send_keys(f.readline(), Keys.RETURN)
 
+# sets up a lobby so you can race your friends
 def setup_lobby():
+    # sleep before doing this because sometimes need the page to reload after
+    # we sign in
     time.sleep(1)
+
     lobby_link = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Race your friends")))
     lobby_link.click()
 
@@ -41,53 +47,77 @@ def setup_lobby():
 
     print(link)
 
+# convenience method to join a race
+# pre-condition: you are in the "race your friends" mode
 def join_race():
     join_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
     join_button.click()
 
+# method to leave a race
+# pre-condition: you are in an active race
 def leave_race():
     leave_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "leave race")))
     leave_button.click()
 
+# start another race
+# pre-condition: you are in public race mode and the race has finished
 def race_again():
     race_again_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "Race Again")))
     race_again_button.click()
 
+# method to get the words for typing
 def get_words():
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "inputPanel")))
-    words = driver.find_elements(By.XPATH, "//span[@unselectable='on']")
 
+    # find all the elements that are "unselectable," i.e. the text
+    words = driver.find_elements(By.XPATH, "//span[@unselectable='on']")
     words = list(map(lambda x: x.text, words))
 
     l = len(words)
 
+    # if the first word is only a single character, e.g. "I," then there our
+    # list will only be 2 long. Otherwise it will be 3
     if l == 3:
         return "{}{} {}".format(words[0], words[1], words[2])
     elif l == 2:
         return "{} {}".format(words[0], words[1])
 
+# method to join the public race
+# pre-condition: you are on the home page
 def join_public():
     join_button = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Enter a typing race")))
     join_button.click()
 
+# method to race
+# pre-condition: you are in a race and have not typed anything
+#
+# text: the words that needed to be typed
+# wpm: the speed at which you want to type - 120 is the default
 def race(text, wpm=120):
-    words = text.split(" ")
-    new_words = [words[i] + " " for i in range(len(words) - 1)]
-    new_words.append(words[-1])
+    words = text.split()
 
-    delay = 2 * 60 / wpm
-    count = 1
+    # add a space after each word so that when we type, it allows us to go
+    # to the next word
+    new_words = [word + " " for word in words]
 
+    # perfectly tuned delay to get you approximately the wpm that you want
+    # methodology is to use characters per minute then factor in the time
+    # that it takes to send the keys
     delay = 60 / (5 * wpm) / 2
+
     wait.until_not(EC.presence_of_element_located((By.XPATH, "//input[@disabled]")))
 
     input_box = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
     input_box.clear()
 
+    # typing typing
     for c in text:
         input_box.send_keys(c)
         time.sleep(delay)
 
+# method to preview the text if the bot is hosting a lobby
+# pre-condition: you are in "race with friends" mode
+# currently not finished
 def preview_text():
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "nonHideableWords")))
 
@@ -110,21 +140,19 @@ def preview_text():
         chat_box.send_keys(s)
         chat_box.send_keys(Keys.RETURN)
 
+# close the browser window
 def quit():
     driver.close()
 
-# go_to_site()
-# setup_lobby()
-# join_race()
-# race(get_words(), 150)
-
+# main method, currently just trolling the public races without signing in
 if __name__ == "__main__":
-    login()
-    setup_lobby()
+    go_to_site()
+    join_public()
 
     while True:
         try:
-            race()
+            race(get_words())
+            race_again()
         except KeyboardInterrupt:
             break
     quit()
