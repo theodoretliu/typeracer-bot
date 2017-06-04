@@ -8,11 +8,11 @@ import time
 
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, float("inf"), poll_frequency=0.1)
-WPM = 200
 
-def login():
+def go_to_site():
     driver.get("http://typeracer.com")
 
+def login():
     sign_in = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Sign In")))
     sign_in.click()
 
@@ -41,44 +41,52 @@ def setup_lobby():
 
     print(link)
 
-def race():
-    start = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
-    start.click()
+def join_race():
+    join_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
+    join_button.click()
 
-    preview_text()
+def leave_race():
+    leave_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "leave race")))
+    leave_button.click()
 
-    wait.until_not(EC.presence_of_element_located((By.CLASS_NAME, "countdownPopup")))
+def race_again():
+    race_again_button = wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "Race Again")))
+    race_again_button.click()
 
-    print(1)
-    wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "txtInput")))
+def get_words():
+    wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "inputPanel")))
+    words = driver.find_elements(By.XPATH, "//span[@unselectable='on']")
 
-    print(2)
-    possibilities = driver.find_elements_by_tag_name("span")
-    print(3)
-    s = ""
-    for e in possibilities:
-        if re.search(r"nhwMiddlegwt-uid-.*", e.get_attribute("id")) is not None:
-            s += e.text
-        elif re.search(r"nhwMiddleCommagwt-uid-.*", e.get_attribute("id")) is not None:
-            s += e.text + " "
-        elif re.search(r'nhwRightgwt-uid-.*',
-                       e.get_attribute("id")) is not None:
-            s += e.text
+    words = list(map(lambda x: x.text, words))
 
-    print(4)
-    text_input = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
+    l = len(words)
 
-    print(5)
-    for word in s.split():
-        text_input.send_keys(word + " ")
-        time.sleep(60 / WPM)
+    if l == 3:
+        return "{}{} {}".format(words[0], words[1], words[2])
+    elif l == 2:
+        return "{} {}".format(words[0], words[1])
 
-    exit = driver.find_element_by_partial_link_text("leave race")
-    exit.click()
+def join_public():
+    join_button = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Enter a typing race")))
+    join_button.click()
 
-    wait.until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'You will be able')]")))
+def race(text, wpm=120):
+    words = text.split(" ")
+    new_words = [words[i] + " " for i in range(len(words) - 1)]
+    new_words.append(words[-1])
 
-    wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT, "join race")))
+    delay = 2 * 60 / wpm
+    count = 1
+
+    delay = 60 / (5 * wpm) / 2
+    wait.until_not(EC.presence_of_element_located((By.XPATH, "//input[@disabled]")))
+
+    input_box = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
+    input_box.clear()
+
+    for c in text:
+        input_box.send_keys(c)
+        time.sleep(delay)
 
 def preview_text():
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "nonHideableWords")))
@@ -104,6 +112,11 @@ def preview_text():
 
 def quit():
     driver.close()
+
+# go_to_site()
+# setup_lobby()
+# join_race()
+# race(get_words(), 150)
 
 if __name__ == "__main__":
     login()
