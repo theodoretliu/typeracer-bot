@@ -17,22 +17,24 @@ def go_to_site():
 def login():
     sign_in = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Sign In")))
     sign_in.click()
+    with open("credentials", "r") as f:
+        credentials = f.readlines()
+
+    credentials = list(map(lambda x: x.strip(), credentials))
 
     username = wait.until(EC.visibility_of_element_located((By.NAME, "username")))
     username.clear()
-    username.send_keys("swimbot")
-
+    username.send_keys(credentials[0])
+    
     password = driver.find_element_by_name("password")
     password.clear()
-    with open("password", "r") as f:
-        password.send_keys(f.readline(), Keys.RETURN)
+    password.send_keys(credentials[1], Keys.RETURN)
+    
+    # sleep after signing in to let the page reload
+    time.sleep(1)
 
 # sets up a lobby so you can race your friends
 def setup_lobby():
-    # sleep before doing this because sometimes need the page to reload after
-    # we sign in
-    time.sleep(1)
-
     lobby_link = wait.until(EC.visibility_of_element_located((By.LINK_TEXT, "Race your friends")))
     lobby_link.click()
 
@@ -68,19 +70,24 @@ def race_again():
 # method to get the words for typing
 def get_words():
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "inputPanel")))
-
+   
     # find all the elements that are "unselectable," i.e. the text
     words = driver.find_elements(By.XPATH, "//span[@unselectable='on']")
     words = list(map(lambda x: x.text, words))
-
+    
     l = len(words)
-
+    
     # if the first word is only a single character, e.g. "I," then there our
     # list will only be 2 long. Otherwise it will be 3
     if l == 3:
-        return "{}{} {}".format(words[0], words[1], words[2])
+        if words[2][0].isalpha():
+            ret =  "{}{} {}".format(words[0], words[1], words[2])
+        else:
+            ret =  "{}{}{}".format(words[0], words[1], words[2])
     elif l == 2:
-        return "{} {}".format(words[0], words[1])
+        ret = "{} {}".format(words[0], words[1])
+    
+    return ret
 
 # method to join the public race
 # pre-condition: you are on the home page
@@ -103,34 +110,23 @@ def race(text, wpm=120):
     # perfectly tuned delay to get you approximately the wpm that you want
     # methodology is to use characters per minute then factor in the time
     # that it takes to send the keys
-    delay = 60 / (5 * wpm) / 2
-
+    # delay = 60 / (5 * wpm) / 2
+    delay = 60 / wpm
     wait.until_not(EC.presence_of_element_located((By.XPATH, "//input[@disabled]")))
 
     input_box = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
     input_box.clear()
 
     # typing typing
-    for c in text:
-        input_box.send_keys(c)
+    for word in new_words:
+        input_box.send_keys(word)
         time.sleep(delay)
 
 # method to preview the text if the bot is hosting a lobby
 # pre-condition: you are in "race with friends" mode
 # currently not finished
-def preview_text():
-    wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "nonHideableWords")))
-
-    possibilities = driver.find_elements_by_tag_name("span")
-
-    s = ">> "
-
-    for e in possibilities:
-        if re.search(r'nhwMiddlegwt-uid-.*', e.get_attribute("id")) is not None:
-            s += e.text + " "
-        elif re.search(r'nhwRightgwt-uid-.*',
-                       e.get_attribute("id")) is not None:
-            s += e.text
+def preview_text(text):
+    s = ">> " + text
 
     chat_box = driver.find_element_by_class_name("AdvancedTextBox")
 
@@ -147,11 +143,12 @@ def quit():
 # main method, currently just trolling the public races without signing in
 if __name__ == "__main__":
     go_to_site()
+    login()
     join_public()
 
     while True:
         try:
-            race(get_words())
+            race(get_words(), 120)
             race_again()
         except KeyboardInterrupt:
             break
