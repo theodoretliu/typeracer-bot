@@ -5,12 +5,14 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import time
+from random import random, seed
 
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, float("inf"), poll_frequency=0.1)
 
 # convenience method to load up the website
 def go_to_site():
+    seed()
     driver.get("http://typeracer.com")
 
 # method to log in with certain hidden credentials. currently not working
@@ -25,11 +27,11 @@ def login():
     username = wait.until(EC.visibility_of_element_located((By.NAME, "username")))
     username.clear()
     username.send_keys(credentials[0])
-    
+
     password = driver.find_element_by_name("password")
     password.clear()
     password.send_keys(credentials[1], Keys.RETURN)
-    
+
     # sleep after signing in to let the page reload
     time.sleep(1)
 
@@ -70,13 +72,13 @@ def race_again():
 # method to get the words for typing
 def get_words():
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "inputPanel")))
-   
+
     # find all the elements that are "unselectable," i.e. the text
     words = driver.find_elements(By.XPATH, "//span[@unselectable='on']")
     words = list(map(lambda x: x.text, words))
-    
+
     l = len(words)
-    
+
     # if the first word is only a single character, e.g. "I," then there our
     # list will only be 2 long. Otherwise it will be 3
     if l == 3:
@@ -86,7 +88,7 @@ def get_words():
             ret =  "{}{}{}".format(words[0], words[1], words[2])
     elif l == 2:
         ret = "{} {}".format(words[0], words[1])
-    
+
     return ret
 
 # method to join the public race
@@ -100,26 +102,34 @@ def join_public():
 #
 # text: the words that needed to be typed
 # wpm: the speed at which you want to type - 120 is the default
-def race(text, wpm=120):
+def race(text, wpm=120, error_rate=0.05):
     words = text.split()
 
     # add a space after each word so that when we type, it allows us to go
     # to the next word
-    new_words = [word + " " for word in words]
+    # new_words = [word + " " for word in words]
 
+    new_words = " ".join(words) + " "
     # perfectly tuned delay to get you approximately the wpm that you want
     # methodology is to use characters per minute then factor in the time
     # that it takes to send the keys
-    # delay = 60 / (5 * wpm) / 2
-    delay = 60 / wpm
+    delay = max(60 / (5 * wpm) - 0.04, 0)
+    # delay = 60 / wpm
     wait.until_not(EC.presence_of_element_located((By.XPATH, "//input[@disabled]")))
 
     input_box = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "txtInput")))
     input_box.clear()
 
     # typing typing
-    for word in new_words:
-        input_box.send_keys(word)
+    for c in new_words:
+        if random() < error_rate:
+            char = '`' if c != '`' else '~'
+
+            input_box.send_keys(char)
+            time.sleep(delay)
+            input_box.send_keys(Keys.BACKSPACE)
+            time.sleep(delay)
+        input_box.send_keys(c)
         time.sleep(delay)
 
 # method to preview the text if the bot is hosting a lobby
@@ -143,7 +153,6 @@ def quit():
 # main method, currently just trolling the public races without signing in
 if __name__ == "__main__":
     go_to_site()
-    login()
     join_public()
 
     while True:
